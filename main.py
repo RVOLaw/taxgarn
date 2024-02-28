@@ -1,11 +1,11 @@
 import os
+import fitz
 import shelve
 import threading
-import tkinter as tk
 from pathlib import Path
 from database_operations import DatabaseOperations
 from PIL import Image, ImageSequence
-from PyPDF2 import PdfMerger
+from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 
 # Import SQL credentials
 with shelve.open('P:/Users/Justin/sql_creds/credentials') as db:
@@ -63,17 +63,6 @@ def delete_temp_files(temp_folder, file_number):
             print(f"Deleted temp file: {temp_file}")
         except Exception as e:
             print(f"Error deleting temp file '{temp_file}': {e}")
-
-def open_file_explorer_gui(path):
-    try:
-        # Move the existing file explorer opening logic here
-        root = tk.Tk()
-        root.withdraw()
-        root.update()
-        os.startfile(path)
-        root.destroy()
-    except Exception as e:
-        print(f"Error opening file explorer: {e}")
 
 def vasion_pull(user_input, database_operations, open_file_explorer_callback, output_path):
     requested_file_numbers, output_path = user_input
@@ -143,20 +132,27 @@ def vasion_pull(user_input, database_operations, open_file_explorer_callback, ou
 # Function for merging PDFs in order
 def merge_pdfs_in_order(output_file_paths, output_folder, original_order):
     try:
-        merger = PdfMerger()
+        merged_output_path = output_folder / 'merged_output.pdf'
+        pdf_writer = fitz.open()
 
         # Sort the PDF paths based on the original order of file numbers
         sorted_pdf_paths = sorted(output_file_paths, key=lambda x: original_order.index(Path(x).stem))
 
         for pdf_path in sorted_pdf_paths:
-            merger.append(str(pdf_path))
+            try:
+                with fitz.open(pdf_path) as pdf_doc:
+                    # Add only the first page to the writer
+                    pdf_writer.insert_pdf(pdf_doc, from_page=0, to_page=0)
+            except Exception as open_error:
+                print(f"Error opening PDF file '{pdf_path}': {open_error}")
 
-        merged_output_path = output_folder / 'merged_output.pdf'
-        with open(merged_output_path, 'wb') as merged_output_file:
-            merger.write(merged_output_file)
+        if pdf_writer.page_count == 0:
+            print("No valid pages to merge.")
+            return None
 
-        # Close the connection
-        merger.close()
+        # Save the merged output PDF
+        pdf_writer.save(merged_output_path)
+        pdf_writer.close()
 
         # Delete other individual PDF files after merging
         for pdf_path in sorted_pdf_paths:
@@ -164,8 +160,8 @@ def merge_pdfs_in_order(output_file_paths, output_folder, original_order):
                 try:
                     Path(pdf_path).unlink()
                     print(f"Deleted: {pdf_path}")
-                except Exception as e:
-                    print(f"Error deleting file '{pdf_path}': {e}")
+                except Exception as delete_error:
+                    print(f"Error deleting file '{pdf_path}': {delete_error}")
 
         return merged_output_path
 

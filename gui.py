@@ -54,21 +54,28 @@ class GUI:
         user_input = self.get_user_input()
         output_path = self.output_path.get()
 
-        # Use threading to run the vasion_pull method in a separate thread
-        threading.Thread(target=vasion_pull, args=(user_input, database_operations, self.open_file_explorer, output_path)).start()
-
-        self.message_label.config(text="Processing. Please Wait...")
-        self.submit_button.config(state=tk.DISABLED)  # Disable the button during processing
-
-    def vasion_pull_threaded(self):
         try:
-            user_input = self.get_user_input()
-            output_path = self.output_path.get()
-            self.vasion_pull(user_input, output_path)
-            self.message_label.config(text="File created successfully!")
+            self.submit_button.config(state=tk.DISABLED)  # Disable the button during processing
+            self.message_label.config(text="Processing. Please Wait...")
 
-            # Open the file explorer to the output folder
-            self.open_file_explorer(output_path)
+            # Use threading to run the vasion_pull method in a separate thread
+            threading.Thread(target=self.vasion_pull_threaded, args=(user_input, output_path)).start()
+
+        except Exception as e:
+            # Show an error message if an exception occurs during conversion
+            self.message_label.config(text=f"An error occurred during conversion: {e}")
+            # Re-enable the "Submit" button after a delay
+            self.master.after(2000, self.enable_submit_button)
+
+    def enable_submit_button(self):
+        self.submit_button.config(state=tk.NORMAL)  # Re-enable the button
+        self.message_label.config(text="File created successfully!")  # Update the message label
+
+    def vasion_pull_threaded(self, user_input, output_path):
+        try:
+            vasion_pull(user_input, database_operations, self.open_file_explorer, output_path)
+            # Call the enable_submit_button method after the processing is done
+            self.master.after(0, self.enable_submit_button)
 
         except Exception as e:
             self.message_label.config(text=f"Error: {e}")
