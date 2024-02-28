@@ -1,10 +1,12 @@
 import os
+import threading
 import tkinter as tk
 from tkinter import filedialog, ttk
 from pathlib import Path
+from main import vasion_pull, database_operations
 
 class GUI:
-    def __init__(self, master, processing_callback, open_file_explorer_callback):
+    def __init__(self, master, processing_callback):
         self.master = master
         self.master.title("Taxgarn2PDF")
 
@@ -14,7 +16,6 @@ class GUI:
         self.merge_var = tk.BooleanVar()
 
         self.processing_callback = processing_callback  # Store the callback function
-        self.open_file_explorer_callback = open_file_explorer_callback  # Store the callback function
 
         self.create_widgets()
 
@@ -38,29 +39,39 @@ class GUI:
         browse_button = tk.Button(self.master, text="Browse", command=self.browse_output_path)
         browse_button.grid(row=3, column=1, padx=5, pady=5)
 
-        # Submit Button
-        submit_button = tk.Button(self.master, text="Submit", command=self.submit_callback)
-        submit_button.grid(row=4, column=2, pady=10, padx=23, sticky=tk.W)
+        ## Submit Button
+        self.submit_button = tk.Button(self.master, text="Submit", command=self.submit_callback)
+        self.submit_button.grid(row=4, column=2, pady=10, padx=23, sticky=tk.W)
 
         # Clear Button
         clear_button = tk.Button(self.master, text="Clear", command=self.clear_entries)
         clear_button.grid(row=4, column=2, pady=10, sticky=tk.E)
 
     def open_file_explorer(self, folder_path):
-        try:
-            root = tk.Tk()
-            root.withdraw()
-            root.update()
-            os.startfile(folder_path)
-            root.destroy()
-        except Exception as e:
-            print(f"Error opening file explorer: {e}")
+        os.startfile(folder_path)
 
     def submit_callback(self):
         user_input = self.get_user_input()
         output_path = self.output_path.get()
-        self.processing_callback(user_input, output_path)  # Pass both user_input and output_path
-        self.message_label.config(text="File created successfully!")
+
+        # Use threading to run the vasion_pull method in a separate thread
+        threading.Thread(target=vasion_pull, args=(user_input, database_operations, self.open_file_explorer, output_path)).start()
+
+        self.message_label.config(text="Processing. Please Wait...")
+        self.submit_button.config(state=tk.DISABLED)  # Disable the button during processing
+
+    def vasion_pull_threaded(self):
+        try:
+            user_input = self.get_user_input()
+            output_path = self.output_path.get()
+            self.vasion_pull(user_input, output_path)
+            self.message_label.config(text="File created successfully!")
+
+            # Open the file explorer to the output folder
+            self.open_file_explorer(output_path)
+
+        except Exception as e:
+            self.message_label.config(text=f"Error: {e}")
 
     def clear_entries(self):
         # Clear all entry fields
@@ -137,3 +148,20 @@ class GUI:
         output_path = Path(output_path_str)
 
         return file_numbers, output_path
+
+if __name__ == "__main__":
+    def submit_callback(self):
+        # Use threading to run the vasion_pull method in a separate thread
+        threading.Thread(target=self.vasion_pull_threaded).start()
+        self.message_label.config(text="Processing. Please Wait...")
+
+    def vasion_pull_threaded(self, user_input, output_path):
+        try:
+            self.vasion_pull(user_input, output_path)
+            self.message_label.config(text="File created successfully!")
+        except Exception as e:
+            self.message_label.config(text=f"Error: {e}")
+
+    root = tk.Tk()
+    my_gui = GUI(root, submit_callback)
+    root.mainloop()

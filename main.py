@@ -6,7 +6,16 @@ from pathlib import Path
 from database_operations import DatabaseOperations
 from PIL import Image, ImageSequence
 from PyPDF2 import PdfMerger
-from gui import GUI
+
+# Import SQL credentials
+with shelve.open('P:/Users/Justin/sql_creds/credentials') as db:
+    server = db['server']
+    database = 'DMSEngine'
+    username = db['username']
+    password = db['password']
+
+connection_string = f"DRIVER=ODBC Driver 18 for SQL Server;SERVER={server};DATABASE=DMSEngine;ENCRYPT=no;UID={username};PWD={password}"
+database_operations = DatabaseOperations(connection_string)
 
 # Set the temp folder location
 temp_folder = Path(r"P:\Users\Justin\taxgarn\temp")
@@ -163,24 +172,3 @@ def merge_pdfs_in_order(output_file_paths, output_folder, original_order):
     except Exception as e:
         print(f"Error merging PDFs: {e}")
         return None
-
-if __name__ == "__main__":
-    # Import SQL credentials
-    with shelve.open('P:/Users/Justin/sql_creds/credentials') as db:
-        server = db['server']
-        database = 'DMSEngine'
-        username = db['username']
-        password = db['password']
-
-    connection_string = f"DRIVER=ODBC Driver 18 for SQL Server;SERVER={server};DATABASE=DMSEngine;ENCRYPT=no;UID={username};PWD={password}"
-    database_operations = DatabaseOperations(connection_string)
-
-    def on_submit(user_input, output_path):
-        processing_callback(user_input, output_path)
-
-    def processing_callback(user_input, output_path):
-        vasion_pull(user_input, database_operations, app.open_file_explorer, output_path)
-
-    root = tk.Tk()
-    app = GUI(root, on_submit, open_file_explorer_gui)
-    root.mainloop()
