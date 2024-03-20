@@ -5,7 +5,7 @@ import threading
 from pathlib import Path
 from database_operations import DatabaseOperations
 from PIL import Image, ImageSequence
-from PyPDF2 import PdfMerger, PdfReader, PdfWriter
+from PyPDF2 import PdfMerger
 
 # Import SQL credentials
 with shelve.open('P:/Users/Justin/sql_creds/credentials') as db:
@@ -132,7 +132,7 @@ def vasion_pull(user_input, database_operations, open_file_explorer_callback, ou
 # Function for merging PDFs in order
 def merge_pdfs_in_order(output_file_paths, output_folder, original_order):
     try:
-        merged_output_path = output_folder / 'merged_output.pdf'
+        merged_output_path = output_folder / f'taxgarn2pdf_output.pdf'
         pdf_writer = fitz.open()
 
         # Sort the PDF paths based on the original order of file numbers
@@ -168,3 +168,4 @@ def merge_pdfs_in_order(output_file_paths, output_folder, original_order):
     except Exception as e:
         print(f"Error merging PDFs: {e}")
         return None
+    
